@@ -1,10 +1,10 @@
-pub struct Ram {
+pub struct RAM {
     memory: [u8; 4096]
 }
 
-impl Ram {
-    pub fn new() -> Ram {
-        let mut ram = Ram{memory: [0; 4096]};
+impl RAM {
+    pub fn new() -> RAM {
+        let mut ram = RAM {memory: [0; 4096]};
         let font :[u8; 80] =
             [0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
             0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -74,15 +74,31 @@ mod tests {
 
     #[test]
     fn read_write_byte() {
-        let mut ram = Ram::new();
+        let mut ram = RAM::new();
         ram.write_byte(0x1D5, 0xAC);
         assert_eq!(0xAC, ram.read_byte(0x1D5));
     }
 
     #[test]
     fn read_write_word() {
-        let mut ram = Ram::new();
-        ram.write_word(0x1D5, 0xABCD);
-        assert_eq!(0xABCD, ram.read_word(0x1D5));
+        let mut ram = RAM::new();
+        ram.write_word(0x1D2, 0xABCD);
+        assert_eq!(0xABCD, ram.read_word(0x1D2));
+    }
+
+    #[test]
+    fn write_word_read_bytes() {
+        let mut ram = RAM::new();
+        ram.write_word(0x1D2, 0xABCD);
+        assert_eq!(0xAB, ram.read_byte(0x1D2));
+        assert_eq!(0xCD, ram.read_byte(0x1D3));
+    }
+
+    #[test]
+    fn write_bytes_read_word() {
+        let mut ram = RAM::new();
+        ram.write_byte(0x3A2, 0x81);
+        ram.write_byte(0x3A3, 0x2C);
+        assert_eq!(0x812C, ram.read_word(0x3A2));
     }
 }
