@@ -21,16 +21,16 @@ impl WordRegister {
         self.value += 1;
     }
 
-    pub fn skip_instruction(&mut self) {
+    pub fn decrement_reg(&mut self) {
+        self.value -= 1;
+    }
+
+    pub fn next_instruction(&mut self) {
         self.value += 2;
     }
 
     pub fn wait_instruction(&mut self) {
         self.value -= 2;
-    }
-
-    pub fn decrement_reg(&mut self) {
-        self.value -= 1;
     }
 }
 
@@ -47,7 +47,7 @@ mod tests {
     }
 
     #[test]
-    fn increment(){
+    fn increment_test(){
         let mut wr = WordRegister::new(String::new());
         wr.write_reg(0x4FFF);
         wr.increment_reg();
@@ -55,10 +55,26 @@ mod tests {
     }
 
     #[test]
-    fn decrement(){
+    fn decrement_test(){
         let mut wr = WordRegister::new(String::new());
         wr.write_reg(0x7F00);
         wr.decrement_reg();
         assert_eq!(0x7EFF, wr.read_reg());
+    }
+
+    #[test]
+    fn skip_test(){
+        let mut wr = WordRegister::new(String::new());
+        wr.write_reg(0x3FFE);
+        wr.next_instruction();
+        assert_eq!(0x4000, wr.read_reg());
+    }
+
+    #[test]
+    fn wait_test(){
+        let mut wr = WordRegister::new(String::new());
+        wr.write_reg(0x5001);
+        wr.wait_instruction();
+        assert_eq!(0x4FFF, wr.read_reg());
     }
 }

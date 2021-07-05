@@ -1,3 +1,5 @@
+use std::fs::read;
+
 pub struct RAM {
     memory: [u8; 4096]
 }
@@ -65,6 +67,14 @@ impl RAM {
         }
 
     }
+    pub fn load_rom(&mut self, filename: String){
+        let rom_bytes = read(filename).unwrap();
+        let mut address: u16 = 0x200;
+        for i in &rom_bytes{
+            self.write_byte(address, *i);
+            address += 1;
+        }
+    }
 }
 
 
@@ -100,5 +110,16 @@ mod tests {
         ram.write_byte(0x3A2, 0x81);
         ram.write_byte(0x3A3, 0x2C);
         assert_eq!(0x812C, ram.read_word(0x3A2));
+    }
+
+    #[test]
+    fn load_rom_test(){
+        let mut ram = RAM::new();
+        ram.load_rom(String::from("test/readtest.ch8"));
+        assert_eq!(0, ram.read_byte(0x1FF));
+        assert_eq!(0, ram.read_byte(0x200));
+        assert_eq!(0x11, ram.read_byte(0x201));
+        assert_eq!(0xFF, ram.read_byte(0x20F));
+        assert_eq!(0, ram.read_byte(0x210));
     }
 }

@@ -2,29 +2,31 @@ extern crate sdl2;
 use crate::ram::RAM;
 use crate::cpu::CPU;
 use crate::graphics_buffer::GraphicsBuffer;
+use crate::speaker::Speaker;
+
 use std::thread::sleep;
-use std::time::Duration;
-use std::fs::read;
-use sdl2::pixels::Color;
-use sdl2::render::WindowCanvas;
+use std::time::{Duration, SystemTime};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::rect::Rect;
+use std::env::args;
 
 mod ram;
 mod cpu;
 mod byte_register;
 mod word_register;
 mod graphics_buffer;
+mod speaker;
 
 const PIXEL_WIDTH: u32 = 16;
 const HEIGHT: u32 = 32*PIXEL_WIDTH;
 const WIDTH: u32 = 64*PIXEL_WIDTH;
 
 fn main() {
+    let args: Vec<String> = args().collect();
+    let filename = &args[1];
     // backend code
     let mut ram = RAM::new();
-    load_rom(&mut ram, String::from("roms/Pong.ch8"));
+    ram.load_rom(String::from(filename));
     let mut cpu = CPU::new(ram);
     let mut gfx = GraphicsBuffer::new();
 
@@ -35,9 +37,12 @@ fn main() {
     .position_centered().build().expect("Could not initialize window");
     let mut canvas = window.into_canvas().build().expect("Could not create canvas");
     let mut event_pump = sdl.event_pump().expect("Could not initliaze event handler");
+    let mut last_tick_time = SystemTime::now();
+    let mut speaker = Speaker::new(sdl);
 
     //main loop
     loop {
+        //input
         for event in event_pump.poll_iter() {
             match event {
                 Event::KeyDown { keycode: Some(Keycode::Escape), .. } => { break },
@@ -76,40 +81,26 @@ fn main() {
                 _ => {}
             }
         }
+        //cpu
         cpu.cycle(&mut gfx);
+        //render
         if cpu.draw_flag{
-         render(&mut canvas, &gfx);
-         cpu.draw_flag = false;
+            gfx.render(&mut canvas);
+            cpu.draw_flag = false;
         }
-        cpu.timer();
+        //audio
+        if cpu.sound_flag{
+            speaker.start();
+        } else {
+            speaker.stop();
+        }
+        //timer
+        if last_tick_time.elapsed().expect("Clock error") >= Duration::new(0, 1_000_000_000u32 / 60){
+            cpu.timer();
+            last_tick_time = SystemTime::now()
+        }
         //sleep(Duration::from_millis(1));
         sleep(Duration::new(0, 1_000_000_000u32 / 2500))
      }
 
-}
-
-fn render(canvas: &mut WindowCanvas, gfx: &GraphicsBuffer){
-    canvas.set_draw_color(Color::BLACK);
-    canvas.clear();
-    canvas.set_draw_color(Color::WHITE);
-    for i in 0..64{
-        for j in 0..32{
-            if gfx.get(i, j){
-                canvas.fill_rect(
-                    Rect::new((PIXEL_WIDTH * i as u32) as i32, (PIXEL_WIDTH * j as u32) as i32,
-                              PIXEL_WIDTH, PIXEL_WIDTH)
-                );
-            }
-        }
-    }
-    canvas.present();
-}
-
-fn load_rom(ram: &mut RAM, filename: String){
-    let rom_bytes = read(filename).unwrap();
-    let mut address: u16 = 0x200;
-    for i in &rom_bytes{
-        ram.write_byte(address, *i);
-        address += 1;
-    }
 }
